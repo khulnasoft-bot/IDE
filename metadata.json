@@ -1,0 +1,5 @@
+{
+  "name": "AI Code Assistant",
+  "description": "An AI-powered IDE to assist with code completion, explanation, refactoring, and debugging, providing a seamless development experience with intelligent, context-aware suggestions.",
+  "requestFramePermissions": []
+}
