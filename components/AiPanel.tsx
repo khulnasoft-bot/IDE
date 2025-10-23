@@ -3,6 +3,15 @@ import { AiFeature, Snippet } from '../types';
 import Icon from './Icon';
 import Loader from './Loader';
 
+// Escape HTML meta-characters to prevent XSS
+function escapeHtml(str: string) {
+  return str.replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+           .replace(/>/g, "&gt;")
+           .replace(/"/g, "&quot;")
+           .replace(/'/g, "&#39;");
+}
+
 interface AiPanelProps {
   onAction: (feature: AiFeature) => void;
   onQuery: (question: string) => void;
@@ -112,7 +121,34 @@ const AiPanel: React.FC<AiPanelProps> = ({ onAction, onQuery, output, isLoading,
         {isLoading ? (
           <Loader />
         ) : output ? (
-          <div className="prose prose-invert prose-sm max-w-none whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: output.replace(/```(\w+)?\n([\s\S]*?)```/g, '<pre><code class="language-$1">$2</code></pre>') }} />
+          <div
+            className="prose prose-invert prose-sm max-w-none whitespace-pre-wrap"
+            dangerouslySetInnerHTML={{
+              __html: (() => {
+                // Split output into code/non-code blocks:
+                const regex = /```(\w+)?\n([\s\S]*?)```/g;
+                let parts = [];
+                let lastIndex = 0;
+                let match;
+                while ((match = regex.exec(output)) !== null) {
+                  // Push preceding non-code, escaped
+                  if (match.index > lastIndex) {
+                    parts.push(escapeHtml(output.slice(lastIndex, match.index)));
+                  }
+                  // Code block
+                  const lang = match[1] ? escapeHtml(match[1]) : '';
+                  const code = escapeHtml(match[2]);
+                  parts.push(`<pre><code class="language-${lang}">${code}</code></pre>`);
+                  lastIndex = regex.lastIndex;
+                }
+                // Remainder after last code block
+                if (lastIndex < output.length) {
+                  parts.push(escapeHtml(output.slice(lastIndex)));
+                }
+                return parts.join('');
+              })()
+            }}
+          />
         ) : (
           <div className="text-center text-gray-500 h-full flex items-center justify-center">
             <p>Select code and choose an action, or ask a question.</p>
